@@ -1,0 +1,38 @@
+/*
+ * Configuration File Template - ESP32-CAM
+ *
+ * SETUP INSTRUCTIONS:
+ * 1. Copy this file: config.h.example → config.h
+ * 2. Edit config.h with your actual credentials
+ * 3. Upload to ESP32-CAM
+ *
+ * NOTE: config.h is gitignored to protect your passwords
+ */
+
+#ifndef CONFIG_H
+#define CONFIG_H
+
+// ===== WIFI CONFIGURATION =====
+
+// WiFi Option 1 (Primary)
+#define WIFI_SSID_1 "YourWiFiName"
+#define WIFI_PASS_1 "YourPassword"
+
+// WiFi Option 2 (Fallback - Hotspot)
+#define WIFI_SSID_2 "YourHotspotName"
+#define WIFI_PASS_2 "YourHotspotPassword"
+
+// Number of WiFi networks configured
+#define WIFI_NETWORK_COUNT 2
+
+// ===== CAMERA CONFIGURATION =====
+
+// JPEG quality (10-63, lower = better quality)
+#define JPEG_QUALITY_HIGH 12
+#define JPEG_QUALITY_MEDIUM 15
+#define JPEG_QUALITY_LOW 20
+
+// Default quality
+#define JPEG_QUALITY_DEFAULT JPEG_QUALITY_MEDIUM
+
+#endif // CONFIG_H

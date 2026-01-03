@@ -1,6 +1,6 @@
 # Fire Robot Project - .gitignore
 
-#  Python Backend 
+#  Python Backend
 __pycache__/
 *.py[cod]
 *$py.class
@@ -43,7 +43,7 @@ lerna-debug.log*
 .env.production.local
 *.env
 
-#  IDE / Editor 
+#  IDE / Editor
 .vscode/
 .idea/
 *.swp
@@ -52,31 +52,37 @@ lerna-debug.log*
 .DS_Store
 Thumbs.db
 
-#  Arduino 
+#  Arduino
 # Không ignore .ino files, chỉ ignore build outputs
 *.hex
 *.bin
 *.elf
 *.map
 
-#  Testing 
+# ESP32 Configuration Files (contains WiFi passwords)
+embedded/esp32-mqtt-simple/config.h
+embedded/esp32-cam-stream/config.h
+# Keep example configs
+!embedded/**/config.h.example
+
+#  Testing
 coverage/
 *.cover
 .hypothesis/
 .pytest_cache/
 
-#  Database 
+#  Database
 *.db
 *.sqlite
 *.sqlite3
 
-#  Temporary Files 
+#  Temporary Files
 *.tmp
 *.temp
 tmp/
 temp/
 
-#  OS 
+#  OS
 .DS_Store
 .DS_Store?
 ._*
@@ -85,7 +91,7 @@ temp/
 ehthumbs.db
 Desktop.ini
 
-#  Project Specific 
+#  Project Specific
 # Backup files
 *.bak
 *.backup

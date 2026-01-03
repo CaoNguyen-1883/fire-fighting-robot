@@ -14,22 +14,23 @@
 #include <WiFi.h>
 #include <PubSubClient.h>
 #include <ArduinoJson.h>
+#include "config.h"  // WiFi & MQTT configuration
 
 // CONFIGURATION 
 
-// WiFi Settings
-const char* WIFI_SSID = "KTX-H05";        // Thay tên WiFi
-const char* WIFI_PASSWORD = "@Concac123";      // Thay mật khẩu WiFi
-// const char* WIFI_SSID = "YCaoNguyen";        // Thay tên WiFi
-// const char* WIFI_PASSWORD = "12345678";      // Thay mật khẩu WiFi
+// WiFi credentials array for multi-network support
+const char* wifiCredentials[][2] = {
+  {WIFI_SSID_1, WIFI_PASS_1},
+  {WIFI_SSID_2, WIFI_PASS_2}
+};
 
+const char* mqttBrokers[] = {
+  MQTT_BROKER_1,
+  MQTT_BROKER_2
+};
 
-
-// // MQTT Settings
-const char* MQTT_BROKER = "192.168.1.8";       // IP máy tính chạy Mosquitto
-// const char* MQTT_BROKER = "192.168.137.1"; //Hotpot laptop
-const int MQTT_PORT = 1883;
-const char* MQTT_CLIENT_ID = "ESP32_FireRobot";
+// Track which network is connected
+int connectedNetworkIndex = -1;
 
 // MQTT Topics
 const char* TOPIC_MOTOR_CONTROL = "robot/control/motor";
@@ -81,9 +82,6 @@ bool pumpState = false;
 unsigned long lastStatusUpdate = 0;
 unsigned long lastWiFiCheck = 0;
 unsigned long lastSensorUpdate = 0;
-const unsigned long STATUS_INTERVAL = 1000;    // Publish status mỗi 1 giây
-const unsigned long SENSOR_INTERVAL = 500;     // Publish sensor data mỗi 500ms
-const unsigned long WIFI_CHECK_INTERVAL = 30000; // Check WiFi mỗi 30 giây
 
 // Connection Status
 bool mqttConnected = false;
@@ -272,7 +270,7 @@ void setupSensors() {
   pinMode(FLAME_DIGITAL, INPUT_PULLUP);  // Pull-up để tránh floating
   pinMode(FLAME_ANALOG, INPUT);
 
-  Serial.println("[SETUP] ✓ Sensors initialized");
+  Serial.println("[SETUP] Sensors initialized");
 }
 
 float readDistance() {
@@ -349,32 +347,45 @@ void publishSensorData() {
 
 void connectWiFi() {
   Serial.println("\n[WiFi] Connecting to WiFi...");
-  Serial.print("[WiFi] SSID: ");
-  Serial.println(WIFI_SSID);
-  Serial.print("[WiFi] Password: ");
-  Serial.println(WIFI_PASSWORD);
-
+  
   WiFi.mode(WIFI_STA);
-  WiFi.begin(WIFI_SSID, WIFI_PASSWORD);
-
-  int attempts = 0;
-  while (WiFi.status() != WL_CONNECTED && attempts < 40) {
-    delay(500);
-    Serial.print(".");
-    attempts++;
+  
+  // Try each configured network
+  for (int i = 0; i < WIFI_NETWORK_COUNT; i++) {
+    Serial.print("[WiFi] Trying network ");
+    Serial.print(i + 1);
+    Serial.print(": ");
+    Serial.println(wifiCredentials[i][0]);
+    
+    WiFi.begin(wifiCredentials[i][0], wifiCredentials[i][1]);
+    
+    int attempts = 0;
+    while (WiFi.status() != WL_CONNECTED && attempts < 20) {
+      delay(500);
+      Serial.print(".");
+      attempts++;
+    }
+    
+    if (WiFi.status() == WL_CONNECTED) {
+      connectedNetworkIndex = i;
+      Serial.println("\n[WiFi] ✓ Connected!");
+      Serial.print("[WiFi] Network: ");
+      Serial.println(wifiCredentials[i][0]);
+      Serial.print("[WiFi] IP Address: ");
+      Serial.println(WiFi.localIP());
+      Serial.print("[WiFi] Signal Strength: ");
+      Serial.print(WiFi.RSSI());
+      Serial.println(" dBm");
+      return;  // Success, exit function
+    } else {
+      Serial.println(" failed");
+    }
   }
-
-  if (WiFi.status() == WL_CONNECTED) {
-    Serial.println("\n[WiFi]  Connected!");
-    Serial.print("[WiFi] IP Address: ");
-    Serial.println(WiFi.localIP());
-    Serial.print("[WiFi] Signal Strength: ");
-    Serial.print(WiFi.RSSI());
-    Serial.println(" dBm");
-  } else {
-    Serial.println("\n[WiFi] Connection FAILED!");
-    Serial.println("[WiFi] Please check SSID and password");
-  }
+  
+  // All networks failed
+  Serial.println("\n[WiFi] ✗ All networks FAILED!");
+  Serial.println("[WiFi] Please check credentials in config.h");
+  connectedNetworkIndex = -1;
 }
 
 void checkWiFi() {
@@ -404,7 +415,10 @@ void mqttCallback(char* topic, byte* payload, unsigned int length) {
   // MOTOR CONTROL
   if (strcmp(topic, TOPIC_MOTOR_CONTROL) == 0) {
     const char* action = doc["action"];
-    int speed = doc["speed"] | 200;  // Default speed = 200
+    int speed = doc["speed"] | DEFAULT_MOTOR_SPEED;
+    
+    // Constrain speed to safe range
+    speed = constrain(speed, MIN_MOTOR_SPEED, MAX_MOTOR_SPEED);
 
     // Execute motor command
     if (strcmp(action, "forward") == 0) {
@@ -448,8 +462,13 @@ void mqttCallback(char* topic, byte* payload, unsigned int length) {
 }
 
 void connectMQTT() {
+    // Use broker matching connected WiFi network
+    const char* broker = (connectedNetworkIndex >= 0) ? 
+                         mqttBrokers[connectedNetworkIndex] : 
+                         MQTT_BROKER_1;
+    
     Serial.print("[MQTT] Connecting to broker ");
-    Serial.print(MQTT_BROKER);
+    Serial.print(broker);
     Serial.print(":");
     Serial.print(MQTT_PORT);
     Serial.print(" as ");
@@ -548,8 +567,11 @@ void setup() {
   // Connect to WiFi
   connectWiFi();
 
-  // Setup MQTT
-  mqtt.setServer(MQTT_BROKER, MQTT_PORT);
+  // Setup MQTT with correct broker
+  const char* broker = (connectedNetworkIndex >= 0) ? 
+                       mqttBrokers[connectedNetworkIndex] : 
+                       MQTT_BROKER_1;
+  mqtt.setServer(broker, MQTT_PORT);
   mqtt.setCallback(mqttCallback);
 
   // Connect to MQTT broker

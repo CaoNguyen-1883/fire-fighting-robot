@@ -19,11 +19,13 @@
  * =====================================================
  */
 
+ 
 #include "esp_camera.h"
 #include "esp_wifi.h"
 #include <WiFi.h>
 #include <WebServer.h>
 #include <WiFiClient.h>
+#include "config.h"  // WiFi configuration
 
 // ===== CAMERA PINS (AI-Thinker ESP32-CAM) =====
 #define PWDN_GPIO_NUM     32
@@ -44,8 +46,14 @@
 #define PCLK_GPIO_NUM     22
 
 // ===== WIFI CONFIGURATION =====
-const char* WIFI_SSID = "KTX-H05";          // Thay tên WiFi
-const char* WIFI_PASSWORD = "@Concac123";  // Thay password WiFi
+// WiFi credentials array for multi-network support
+const char* wifiCredentials[][2] = {
+  {WIFI_SSID_1, WIFI_PASS_1},
+  {WIFI_SSID_2, WIFI_PASS_2}
+};
+
+// Track which network is connected
+int connectedNetworkIndex = -1;
 
 // ===== WEB SERVER =====
 WebServer server(80);
@@ -93,13 +101,13 @@ bool initCamera() {
   if (psramFound()) {
     Serial.println("[CAMERA] PSRAM found");
     config.frame_size = FRAMESIZE_VGA;   // 640x480 - good balance
-    config.jpeg_quality = 15; //12 to 15             // 10-63 (lower = better quality, slower)
+    config.jpeg_quality = JPEG_QUALITY_DEFAULT;  // From config.h
     config.fb_count = 2;                  // 2 buffers for smooth streaming
     config.fb_location = CAMERA_FB_IN_PSRAM;  // Use PSRAM for frame buffers
   } else {
     Serial.println("[CAMERA] No PSRAM - using QVGA");
     config.frame_size = FRAMESIZE_QVGA;  // 320x240
-    config.jpeg_quality = 12;
+    config.jpeg_quality = JPEG_QUALITY_HIGH;  // Better quality for smaller frame
     config.fb_count = 1;
     config.fb_location = CAMERA_FB_IN_DRAM;
   }
@@ -317,34 +325,50 @@ void handleRoot() {
 
 void connectWiFi() {
   Serial.println("\n[WiFi] Connecting...");
-  Serial.print("[WiFi] SSID: ");
-  Serial.println(WIFI_SSID);
-
+  
   WiFi.mode(WIFI_STA);
   WiFi.setSleep(false);  // Disable WiFi sleep for better performance
-  WiFi.begin(WIFI_SSID, WIFI_PASSWORD);
-
-  int attempts = 0;
-  while (WiFi.status() != WL_CONNECTED && attempts < 40) {
-    delay(500);
-    Serial.print(".");
-    attempts++;
-  }
-
-  if (WiFi.status() == WL_CONNECTED) {
-    Serial.println("\n[WiFi] Connected!");
-    Serial.print("[WiFi] IP Address: ");
-    Serial.println(WiFi.localIP());
-    Serial.print("[WiFi] Signal: ");
-    Serial.print(WiFi.RSSI());
-    Serial.println(" dBm");
+  
+  // Try each configured network
+  for (int i = 0; i < WIFI_NETWORK_COUNT; i++) {
+    Serial.print("[WiFi] Trying network ");
+    Serial.print(i + 1);
+    Serial.print(": ");
+    Serial.println(wifiCredentials[i][0]);
     
-    // Disable WiFi power save COMPLETELY for stable FPS
-    esp_wifi_set_ps(WIFI_PS_NONE);
-    Serial.println("[WiFi] Power save DISABLED");
-  } else {
-    Serial.println("\n[WiFi] Connection FAILED!");
+    WiFi.begin(wifiCredentials[i][0], wifiCredentials[i][1]);
+    
+    int attempts = 0;
+    while (WiFi.status() != WL_CONNECTED && attempts < 20) {
+      delay(500);
+      Serial.print(".");
+      attempts++;
+    }
+    
+    if (WiFi.status() == WL_CONNECTED) {
+      connectedNetworkIndex = i;
+      Serial.println("\n[WiFi] ✓ Connected!");
+      Serial.print("[WiFi] Network: ");
+      Serial.println(wifiCredentials[i][0]);
+      Serial.print("[WiFi] IP Address: ");
+      Serial.println(WiFi.localIP());
+      Serial.print("[WiFi] Signal: ");
+      Serial.print(WiFi.RSSI());
+      Serial.println(" dBm");
+      
+      // Disable WiFi power save COMPLETELY for stable FPS
+      esp_wifi_set_ps(WIFI_PS_NONE);
+      Serial.println("[WiFi] Power save DISABLED");
+      return;  // Success, exit function
+    } else {
+      Serial.println(" failed");
+    }
   }
+  
+  // All networks failed
+  Serial.println("\n[WiFi] ✗ All networks FAILED!");
+  Serial.println("[WiFi] Please check credentials in config.h");
+  connectedNetworkIndex = -1;
 }
 
 // ===== SETUP =====

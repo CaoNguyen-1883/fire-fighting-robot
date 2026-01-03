@@ -1,0 +1,56 @@
+/*
+ * Configuration File Template
+ *
+ * SETUP INSTRUCTIONS:
+ * 1. Copy this file: config.h.example → config.h
+ * 2. Edit config.h with your actual credentials
+ * 3. Upload to ESP32
+ *
+ * NOTE: config.h is gitignored to protect your passwords
+ */
+
+#ifndef CONFIG_H
+#define CONFIG_H
+
+// ===== WIFI CONFIGURATION =====
+
+// WiFi Option 1 (Primary)
+#define WIFI_SSID_1 "YourWiFiName"
+#define WIFI_PASS_1 "YourPassword"
+
+// WiFi Option 2 (Fallback - Hotspot)
+#define WIFI_SSID_2 "YourHotspotName"
+#define WIFI_PASS_2 "YourHotspotPassword"
+
+// Number of WiFi networks configured
+#define WIFI_NETWORK_COUNT 2
+
+// ===== MQTT CONFIGURATION =====
+
+// MQTT Broker for WiFi 1 (Home/Lab network)
+#define MQTT_BROKER_1 "192.168.1.8"
+
+// MQTT Broker for WiFi 2 (Hotspot)
+#define MQTT_BROKER_2 "192.168.137.1"
+
+// MQTT Port (usually 1883)
+#define MQTT_PORT 1883
+
+// MQTT Client ID
+#define MQTT_CLIENT_ID "ESP32_FireRobot"
+
+// ===== MOTOR CONFIGURATION =====
+
+// Motor speed limits (0-255)
+#define DEFAULT_MOTOR_SPEED 200
+#define MAX_MOTOR_SPEED 255
+#define MIN_MOTOR_SPEED 50
+
+// ===== SENSOR CONFIGURATION =====
+
+// Sensor update intervals (milliseconds)
+#define STATUS_INTERVAL 1000      // Publish status every 1 second
+#define SENSOR_INTERVAL 500       // Publish sensor data every 500ms
+#define WIFI_CHECK_INTERVAL 30000 // Check WiFi every 30 seconds
+
+#endif // CONFIG_H

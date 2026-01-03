@@ -150,9 +150,9 @@ export default function DashboardPage() {
         if (key === "w") sendMotorCommand("forward");
         else if (key === "s") sendMotorCommand("backward");
         else if (key === "a")
-          sendMotorCommand("left", Math.floor(speed * 0.9)); // Slightly slower for turns
+          sendMotorCommand("left", Math.floor(speed)); // Slightly slower for turns
         else if (key === "d")
-          sendMotorCommand("right", Math.floor(speed * 0.9));
+          sendMotorCommand("right", Math.floor(speed));
         // Pump commands (toggle)
         else if (key === " ") sendPumpCommand("toggle");
         else if (key === "q") sendPumpCommand("on");
@@ -278,7 +278,7 @@ export default function DashboardPage() {
                         : "bg-gray-700 border-gray-600 hover:bg-gray-600"
                     }`}
                     onMouseDown={() =>
-                      sendMotorCommand("left", Math.floor(speed * 0.9))
+                      sendMotorCommand("left", Math.floor(speed))
                     }
                     onMouseUp={() => sendMotorCommand("stop", 0)}
                     onMouseLeave={() => sendMotorCommand("stop", 0)}
@@ -307,7 +307,7 @@ export default function DashboardPage() {
                       : "bg-gray-700 border-gray-600 hover:bg-gray-600"
                   }`}
                   onMouseDown={() =>
-                    sendMotorCommand("right", Math.floor(speed * 0.9))
+                    sendMotorCommand("right", Math.floor(speed ))
                   }
                   onMouseUp={() => sendMotorCommand("stop", 0)}
                   onMouseLeave={() => sendMotorCommand("stop", 0)}
