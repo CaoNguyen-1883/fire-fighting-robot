@@ -68,6 +68,9 @@ const char* TOPIC_SENSOR_FLAME = "robot/sensors/flame";
 #define PWM_RESOLUTION 8        // 8-bit resolution (0-255)
 
 // GLOBAL VARIABLES
+// 
+#define PWM_LEFT_CALIBRATION 1.00
+#define PWM_RIGHT_CALIBRATION 0.85
 
 // WiFi & MQTT Clients
 WiFiClient espClient;
@@ -128,13 +131,13 @@ void setupMotors() {
 }
 
 void motorForward(uint8_t speed) {
-  // Left motor forward
-  digitalWrite(MOTOR_IN1, LOW);
-  digitalWrite(MOTOR_IN2, HIGH);
+  // Left motor forward (inverted)
+  digitalWrite(MOTOR_IN1, HIGH);
+  digitalWrite(MOTOR_IN2, LOW);
 
-  // Right motor forward
-  digitalWrite(MOTOR_IN3, LOW);
-  digitalWrite(MOTOR_IN4, HIGH);
+  // Right motor forward (inverted)
+  digitalWrite(MOTOR_IN3, HIGH);
+  digitalWrite(MOTOR_IN4, LOW);
 
   // Set speed
   ledcWrite(PWM_CHANNEL_LEFT, speed);
@@ -147,13 +150,13 @@ void motorForward(uint8_t speed) {
 }
 
 void motorBackward(uint8_t speed) {
-  // Left motor backward
-  digitalWrite(MOTOR_IN1, HIGH);
-  digitalWrite(MOTOR_IN2, LOW);
+  // Left motor backward (inverted)
+  digitalWrite(MOTOR_IN1, LOW);
+  digitalWrite(MOTOR_IN2, HIGH);
 
-  // Right motor backward
-  digitalWrite(MOTOR_IN3, HIGH);
-  digitalWrite(MOTOR_IN4, LOW);
+  // Right motor backward (inverted)
+  digitalWrite(MOTOR_IN3, LOW);
+  digitalWrite(MOTOR_IN4, HIGH);
 
   // Set speed
   ledcWrite(PWM_CHANNEL_LEFT, speed);
@@ -166,13 +169,13 @@ void motorBackward(uint8_t speed) {
 }
 
 void motorLeft(uint8_t speed) {
-  // Left motor backward (rotate in place)
-  digitalWrite(MOTOR_IN1, LOW);
-  digitalWrite(MOTOR_IN2, HIGH);
+  // Left motor backward, Right motor forward (inverted)
+  digitalWrite(MOTOR_IN1, HIGH);
+  digitalWrite(MOTOR_IN2, LOW);
 
-  // Right motor forward
-  digitalWrite(MOTOR_IN3, HIGH);
-  digitalWrite(MOTOR_IN4, LOW);
+  // Right motor forward (inverted)
+  digitalWrite(MOTOR_IN3, LOW);
+  digitalWrite(MOTOR_IN4, HIGH);
 
   // Set speed
   ledcWrite(PWM_CHANNEL_LEFT, speed);
@@ -185,13 +188,13 @@ void motorLeft(uint8_t speed) {
 }
 
 void motorRight(uint8_t speed) {
-  // Left motor forward
-  digitalWrite(MOTOR_IN1, HIGH);
-  digitalWrite(MOTOR_IN2, LOW);
+  // Left motor forward, Right motor backward (inverted)
+  digitalWrite(MOTOR_IN1, LOW);
+  digitalWrite(MOTOR_IN2, HIGH);
 
-  // Right motor backward (rotate in place)
-  digitalWrite(MOTOR_IN3, LOW);
-  digitalWrite(MOTOR_IN4, HIGH);
+  // Right motor backward (inverted)
+  digitalWrite(MOTOR_IN3, HIGH);
+  digitalWrite(MOTOR_IN4, LOW);
 
   // Set speed
   ledcWrite(PWM_CHANNEL_LEFT, speed);

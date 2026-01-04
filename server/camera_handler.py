@@ -4,6 +4,7 @@ Manages camera stream proxy from ESP32-CAM to Frontend
 Prepares for future AI processing integration
 """
 
+from asyncio.windows_events import NULL
 import logging
 import time
 from threading import Lock, Thread
@@ -59,9 +60,10 @@ class CameraHandler:
         # Try to load YOLO model, fallback to color-based if not available
         import os
 
-        yolo_model_path = os.path.join(
-            os.path.dirname(__file__), "models", "yolov5s_best.pt"
-        )
+        # yolo_model_path = os.path.join(
+        #     os.path.dirname(__file__), "models", "yolov5s_best.pt"
+        # )
+        yolo_model_path = ""
 
         if os.path.exists(yolo_model_path):
             logger.info(
