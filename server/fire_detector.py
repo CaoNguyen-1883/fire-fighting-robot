@@ -158,17 +158,32 @@ class FireDetector:
             processed_frame = frame_processed.copy()
 
             # === STEP 2: Process each detection ===
-            for result in results:
-                boxes = result.boxes
-                for box in boxes:
-                    # Get box coordinates
-                    x1, y1, x2, y2 = box.xyxy[0].cpu().numpy()
-                    confidence = float(box.conf[0])
-                    class_id = int(box.cls[0])
-                    class_name = result.names[class_id]
+            # YOLOv5 returns a single result object, not a list
+            if len(results.xyxy) > 0 and len(results.xyxy[0]) > 0:
+                # Get detections from first image (we only process 1 frame at a time)
+                preds = results.xyxy[0].cpu().numpy()  # [x1, y1, x2, y2, conf, class]
+
+                logger.info(f"[YOLO] Found {len(preds)} detection(s)")
+
+                for pred in preds:
+                    # Get box coordinates and class info
+                    # pred format: [x1, y1, x2, y2, confidence, class_id]
+                    x1, y1, x2, y2, confidence, class_id = pred
+                    class_id = int(class_id)
+                    class_name = results.names[class_id]
+
+                    # DEBUG: Log all detections to see what YOLO is detecting
+                    logger.info(
+                        f"[YOLO DEBUG] Detected: class_id={class_id}, "
+                        f"class_name='{class_name}', confidence={confidence:.2f}"
+                    )
 
                     # Check if fire/flame/smoke class
                     if class_name.lower() not in ["fire", "flame", "smoke"]:
+                        logger.warning(
+                            f"[YOLO] Skipping non-fire class: '{class_name}' "
+                            f"(not in ['fire', 'flame', 'smoke'])"
+                        )
                         continue
 
                     # Create mask for this detection region
@@ -483,7 +498,7 @@ class FireDetector:
             # 1000-1500K: Red/Orange (wood fire, low temp)
             # 1500-2000K: Orange/Yellow (candle, wood fire)
             # 2000-3000K: Yellow/White (gas flame, high temp)
-            # 3000K+:     Blue/White (butane lighter, very high temp)
+            # Note: Blue flames (3000K+, lighters) NOT detected - focus on typical fires
 
             masks = []
 
@@ -511,21 +526,7 @@ class FireDetector:
             lower_yellow_white = np.array([25, 50, 180])
             upper_yellow_white = np.array([40, 150, 255])
             masks.append(cv2.inRange(hsv, lower_yellow_white, upper_yellow_white))
-
-            # 4. BLUE flames (very high temperature: butane lighter, gas flame core)
-            # Hue: 100-130 (cyan/blue)
-            # Saturation: MUST be HIGH (>120) to avoid sky/window light false positives
-            # Value: MEDIUM to HIGH (glowing), but NOT too bright (avoid daylight)
-            #
-            # Real blue flame: S=150-255 (deep blue color), V=100-220
-            # Sky/window light: S=30-80 (pale blue), V=180-255 (very bright)
-            lower_blue = np.array([100, 120, 100])  # S increased: 50→120 (stricter)
-            upper_blue = np.array(
-                [130, 255, 220]
-            )  # V decreased: 255→220 (not too bright)
-            masks.append(cv2.inRange(hsv, lower_blue, upper_blue))
-
-            # 5. WHITE/BRIGHT flames (intense heat core)
+            # 4. WHITE/BRIGHT flames (intense heat core)
             # Low saturation (almost no color), very high brightness
             # This catches the BRIGHT CENTER of flames (any color)
             h_channel, s_channel, v_channel = cv2.split(hsv)
@@ -536,7 +537,7 @@ class FireDetector:
             white_mask = cv2.bitwise_and(low_sat_mask, high_val_mask)
             masks.append(white_mask)
 
-            # 6. BRIGHT spots (using LAB color space)
+            # 5. BRIGHT spots (using LAB color space)
             # L channel = Lightness (0=black, 255=white)
             # Flames are ALWAYS bright, regardless of color
             l_channel, _, _ = cv2.split(lab)

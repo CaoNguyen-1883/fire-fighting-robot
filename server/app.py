@@ -5,7 +5,7 @@ from flask import Flask, Response, jsonify, request
 from flask_cors import CORS
 from flask_socketio import SocketIO
 
-
+from auto_controller import AutoController
 from camera_handler import CameraHandler
 
 # Import các module đã tạo
@@ -64,6 +64,9 @@ ws_handler.register_events()
 
 # Khởi tạo Camera Handler
 camera_handler = CameraHandler(ESP32_CAM_URL)
+
+# Khởi tạo Auto Controller
+auto_controller = AutoController(mqtt_handler, camera_handler)
 
 
 # ===== REST API ENDPOINTS =====
@@ -269,10 +272,95 @@ def fire_status():
     """
     fire_status = camera_handler.get_fire_status()
 
-
     return jsonify({"detection": fire_status})
 
 
+# ===== AUTO MODE ENDPOINTS =====
+
+
+@app.route("/api/auto/enable", methods=["POST"])
+def enable_auto_mode():
+    """
+    POST /api/auto/enable
+    Bật chế độ tự động - robot sẽ tự động tìm và dập lửa
+
+    Returns:
+        JSON with success status
+    """
+    try:
+        success = auto_controller.enable_auto_mode()
+
+        if success:
+            logger.warning("[API] 🤖 AUTO MODE ENABLED by user")
+            return jsonify(
+                {
+                    "status": "ok",
+                    "auto_mode": True,
+                    "message": "Autonomous fire suppression enabled",
+                }
+            )
+        else:
+            return jsonify(
+                {"status": "error", "message": "Auto mode already enabled"}
+            ), 400
+
+    except Exception as e:
+        logger.error(f"[API] Error enabling auto mode: {e}")
+        return jsonify({"error": str(e)}), 500
+
+
+@app.route("/api/auto/disable", methods=["POST"])
+def disable_auto_mode():
+    """
+    POST /api/auto/disable
+    Tắt chế độ tự động - chuyển về manual control
+
+    Returns:
+        JSON with success status
+    """
+    try:
+        success = auto_controller.disable_auto_mode()
+
+        if success:
+            logger.info("[API] AUTO MODE DISABLED by user")
+            return jsonify(
+                {
+                    "status": "ok",
+                    "auto_mode": False,
+                    "message": "Manual control restored",
+                }
+            )
+        else:
+            return jsonify(
+                {"status": "error", "message": "Auto mode already disabled"}
+            ), 400
+
+    except Exception as e:
+        logger.error(f"[API] Error disabling auto mode: {e}")
+        return jsonify({"error": str(e)}), 500
+
+
+@app.route("/api/auto/status")
+def auto_status():
+    """
+    GET /api/auto/status
+    Lấy trạng thái auto mode
+
+    Returns:
+        JSON with auto mode status
+    """
+    try:
+        status = auto_controller.get_status()
+        return jsonify(
+            {
+                "status": "ok",
+                "auto_controller": status,
+                "timestamp": datetime.now().isoformat(),
+            }
+        )
+    except Exception as e:
+        logger.error(f"[API] Error getting auto status: {e}")
+        return jsonify({"error": str(e)}), 500
 
 
 # ===== APPLICATION STARTUP =====
@@ -295,7 +383,12 @@ if __name__ == "__main__":
     logger.info("[Camera] Starting camera stream handler...")
     camera_handler.start()
 
+    # Auto-start AUTO MODE
+    from config import AUTO_MODE_ENABLED
 
+    if AUTO_MODE_ENABLED:
+        logger.warning("[AutoController] AUTO MODE enabled by default")
+        auto_controller.enable_auto_mode()
 
     # Start Flask-SocketIO server
     logger.info("[Flask] Starting server...")
